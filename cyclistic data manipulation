@@ -1,0 +1,102 @@
+-- Creating combined_data table
+create table quiet-terra-394719.cyclistic_data.combined_data as
+select * from quiet-terra-394719.cyclistic_data.202208_p1
+union all
+select * from quiet-terra-394719.cyclistic_data.202208_p2
+union all
+select * from quiet-terra-394719.cyclistic_data.202209_p1
+union all
+select * from quiet-terra-394719.cyclistic_data.202209_p2
+union all
+select * from quiet-terra-394719.cyclistic_data.202210_p1
+union all
+select * from quiet-terra-394719.cyclistic_data.202210_p2
+union all
+select * from quiet-terra-394719.cyclistic_data.202211
+union all
+select * from quiet-terra-394719.cyclistic_data.202212
+union all
+select * from quiet-terra-394719.cyclistic_data.202301
+union all
+select * from quiet-terra-394719.cyclistic_data.202302
+union all
+select * from quiet-terra-394719.cyclistic_data.202303
+union all
+select * from quiet-terra-394719.cyclistic_data.202304
+union all
+select * from quiet-terra-394719.cyclistic_data.202305_p1
+union all
+select * from quiet-terra-394719.cyclistic_data.202305_p2
+union all
+select * from quiet-terra-394719.cyclistic_data.202306_p1
+union all
+select * from quiet-terra-394719.cyclistic_data.202306_p2
+union all
+select * from quiet-terra-394719.cyclistic_data.202307_p1
+union all
+select * from quiet-terra-394719.cyclistic_data.202307_p2
+
+-- Removing rows with null values in the ride_id column of the combined_data table
+delete from quiet-terra-394719.cyclistic_data.combined_data
+where ride_id is null
+
+-- Adding the day_of_week column to the combined_data table
+alter table quiet-terra-394719.cyclistic_data.combined_data
+add column day_of_week string
+
+-- Adding the season column to the combined_data table
+alter table quiet-terra-394719.cyclistic_data.combined_data
+add column season string
+
+-- Adding the ride_length column to the combined_data table
+alter table quiet-terra-394719.cyclistic_data.combined_data
+add column ride_length int64;
+
+-- Calculations to insert data into the day_of_week column in the combined_data table
+update quiet-terra-394719.cyclistic_data.combined_data
+set day_of_week =
+  case extract(dayofweek from started_at)
+    when 1 then 'sunday'
+    when 2 then 'monday'
+    when 3 then 'tuesday'
+    when 4 then 'wednesday'
+    when 5 then 'thursday'
+    when 6 then 'friday'
+    when 7 then 'saturday'
+  end
+where started_at is not null
+
+-- Calculations to insert data into the season column in the combined_data table
+update quiet-terra-394719.cyclistic_data.combined_data
+set season =
+  case extract(month from started_at)
+    when 12 then 'Winter'
+    when 1 then 'Winter'
+    when 2 then 'Winter'
+    when 3 then 'Spring'
+    when 4 then 'Spring'
+    when 5 then 'Spring'
+    when 6 then 'Summer'
+    when 7 then 'Summer'
+    when 8 then 'Summer'
+    when 9 then 'Fall'
+    when 10 then 'Fall'
+    when 11 then 'Fall'
+  end
+where started_at is not null;
+
+-- Calculations to insert data into the ride_length column in the combined_data table
+update `quiet-terra-394719.cyclistic_data.combined_data`
+set ride_length = timestamp_diff(ended_at, started_at, minute)
+where ended_at is not null and started_at is not null;
+
+-- Creation of the member_vs_casual_analysis_data table
+create table quiet-terra-394719.cyclistic_data.member_vs_casual_analysis_data
+as
+select
+  member_casual as CustomerType,
+  rideable_type as BikeType,
+  ride_length as DurationInMinutes,
+  day_of_week as Day,
+  season
+from quiet-terra-394719.cyclistic_data.combined_data

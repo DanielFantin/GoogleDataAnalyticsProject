@@ -1,4 +1,5 @@
--- Creating combined_data table
+-- Creating the combined_data table
+
 create table quiet-terra-394719.cyclistic_data.combined_data as
 select * from quiet-terra-394719.cyclistic_data.202208_p1
 union all
@@ -36,23 +37,38 @@ select * from quiet-terra-394719.cyclistic_data.202307_p1
 union all
 select * from quiet-terra-394719.cyclistic_data.202307_p2
 
--- Removing rows with null values in the ride_id column of the combined_data table
+-- Removing rows with null values in the ride_id column in the combined_data table
+
 delete from quiet-terra-394719.cyclistic_data.combined_data
 where ride_id is null
 
 -- Adding the day_of_week column to the combined_data table
+
 alter table quiet-terra-394719.cyclistic_data.combined_data
 add column day_of_week string
 
 -- Adding the season column to the combined_data table
+
 alter table quiet-terra-394719.cyclistic_data.combined_data
 add column season string
 
 -- Adding the ride_length column to the combined_data table
+
 alter table quiet-terra-394719.cyclistic_data.combined_data
 add column ride_length int64;
 
+-- Adding the start_part_of_day column to the combined_data table
+
+alter table quiet-terra-394719.cyclistic_data.combined_data
+add column start_part_of_day string;
+
+-- Adding the end_part_of_day column to the combined_data table
+
+alter table quiet-terra-394719.cyclistic_data.combined_data
+add column end_part_of_day string;
+
 -- Calculations to insert data into the day_of_week column in the combined_data table
+
 update quiet-terra-394719.cyclistic_data.combined_data
 set day_of_week =
   case extract(dayofweek from started_at)
@@ -67,6 +83,7 @@ set day_of_week =
 where started_at is not null
 
 -- Calculations to insert data into the season column in the combined_data table
+
 update quiet-terra-394719.cyclistic_data.combined_data
 set season =
   case extract(month from started_at)
@@ -86,17 +103,46 @@ set season =
 where started_at is not null;
 
 -- Calculations to insert data into the ride_length column in the combined_data table
+
 update `quiet-terra-394719.cyclistic_data.combined_data`
 set ride_length = timestamp_diff(ended_at, started_at, minute)
 where ended_at is not null and started_at is not null;
 
--- Creation of the member_vs_casual_analysis_data table
+-- Calculations to insert data into the start_part_of_day in the combined_data table
+
+update quiet-terra-394719.cyclistic_data.combined_data
+set start_part_of_day =
+  case 
+    when extract(hour from started_at) >= 6 and extract(hour from started_at) < 12 then 'morning'
+    when extract(hour from started_at) >= 12 and extract(hour from started_at) < 17 then 'afternoon'
+    when extract(hour from started_at) >= 17 and extract(hour from started_at) < 21 then 'evening'
+    else 'night'
+  end
+where started_at is not null;
+
+-- Calculations to insert data into the end_part_of_day column in the combined_data table
+
+update quiet-terra-394719.cyclistic_data.combined_data
+set end_part_of_day =
+  case 
+    when extract(hour from ended_at) >= 6 and extract(hour from ended_at) < 12 then 'morning'
+    when extract(hour from ended_at) >= 12 and extract(hour from ended_at) < 17 then 'afternoon'
+    when extract(hour from ended_at) >= 17 and extract(hour from ended_at) < 21 then 'evening'
+    else 'night'
+  end
+where ended_at is not null;
+
+-- Creating the member_vs_casual_analysis_data table
+
 create table quiet-terra-394719.cyclistic_data.member_vs_casual_analysis_data
 as
 select
+  ride_id as RideID,
   member_casual as CustomerType,
   rideable_type as BikeType,
   ride_length as DurationInMinutes,
   day_of_week as Day,
-  season
+  season as Season,
+  start_part_of_day as StartPartOfDay,
+  end_part_of_day as EndPartOfDay,
 from quiet-terra-394719.cyclistic_data.combined_data
